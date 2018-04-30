@@ -6,40 +6,33 @@
 
 //Feel free to modify these basic parameters to suit your needs.
 float       forward_power   =   5.2; //Power used to go forward (1 to 30)
-float       reverse_power   =  -5.2; //Power ued to go reverse (-1 to -30)
 float       turning_ratio   =   8.0; //How sharply the vehicle turns. Less is more sharply. (.1 to 10)
-string      sit_message     =   "Bounce"; //Sit message
 vector      movementOffset;
 //Anything past this point should only be modfied if you know what you are doing
 string      last_wheel_direction;
 string      cur_wheel_direction;
-key         agent;
+integer     cur_level       =   0;
 integer     listener;
 integer     menuChannel     =   -1976;
 integer     chan            =   -12345;
-key         id;
-integer     iChan           =   -1812221819;
+integer     iRLVchan        =   -1812221819;
 
-integer     iDialogChannel =   0;
-integer     iListenHandle  =   0;
-
-mainMenu(key id)
+mainMenu( key id )
 {
-    list        buttons;
-    if(llDetectedKey(0))
-        buttons += ["Release"];
-    string      prompt          =   "Please select an option.";
+    list        buttons     = ["Release"];
+    // Make sure we close the former listener, so we don't run out of listens.
+    llListenRemove( listener );
     listener = llListen(menuChannel, "", id, "");
-    llDialog(id, prompt, buttons, menuChannel);
+    llDialog( id, "Please select an option.", buttons, menuChannel );
 }
-
 
 default
 {
     state_entry()
     {
-        llSetSitText(sit_message);
-        llSetStatus( STATUS_ROTATE_X | STATUS_ROTATE_Y, TRUE);
+        llSetSitText( "Bounce" );
+        llSetStatus( STATUS_ROTATE_X | STATUS_ROTATE_Y, TRUE  );
+        llSetStatus( STATUS_PHYSICS,                    FALSE );
         llSetLinkAlpha(2,0.0,ALL_SIDES);
         llSetLinkAlpha(3,1.0,ALL_SIDES);
         //car
@@ -57,25 +50,18 @@ default
         llSetVehicleFloatParam( VEHICLE_VERTICAL_ATTRACTION_EFFICIENCY, 0.50);
         llSetVehicleFloatParam( VEHICLE_VERTICAL_ATTRACTION_TIMESCALE,  0.50);
     }
-    touch_start(integer total_number)
+    touch_start( integer total_number )
     {
-        if(llDetectedKey(0) != llGetOwner())
-           mainMenu(llDetectedKey(0));
+        key         id          =   llDetectedKey( 0 );
+        if(id != llGetOwner())
+           mainMenu( id );
         else
-            llSay(0,llGetDisplayName(llDetectedOwner(0)) + " Tries To escape but cant get free");
+            llSay( 0, llGetDisplayName(id) + " tries to escape but cant get free" );
     } 
-    listen(integer chan, string name, key id, string msg)
+    listen( integer chan, string name, key id, string msg )
     {
         if(msg == "Release")
-        {
-            llSay(-12345,"Release");
-            llRegionSayTo(llDetectedOwner(0),iChan, "ClearRLV," + (string)llGetOwner() + ",@clear");
-            llOwnerSay("@clear");
-            llRegionSayTo(llGetOwner(),iChan, "ClearRLV," + (string)llGetOwner() + "!release");
-            llSleep(0.5);
-            llRegionSayTo(llGetOwner(),iChan, "ForceUnSit," + (string)llGetOwner() + ",@unsit=force");
-            llSleep(2.0);
-        }
+            llMessageLinked(LINK_ALL_CHILDREN, -12345, "Release", id);
     }
     changed(integer change)
     {
@@ -87,47 +73,42 @@ default
                 if (agent != llGetOwner())
                 {
                                     
-                    llMessageLinked(LINK_ALL_CHILDREN , 0,"DRIVING", NULL_KEY);
-                    llSleep(.4);
-                    llSetStatus(STATUS_PHYSICS, TRUE);
-                    llSleep(.1);
+                    llMessageLinked( LINK_ALL_CHILDREN, 0, "DRIVING", NULL_KEY );
+                    llSleep( .4 );
+                    llSetStatus( STATUS_PHYSICS, TRUE );
                     llRequestPermissions(
                         agent,
                         PERMISSION_TRIGGER_ANIMATION    |
                         PERMISSION_TAKE_CONTROLS        |
                         PERMISSION_TRACK_CAMERA
                     );
-                    llGetPermissions();
-                    llSetTimerEvent(0.1);
-                    llSetLinkAlpha(3,1.0,ALL_SIDES);
+                    llSetLinkAlpha( 3, 1.0, ALL_SIDES );
                     
                 }
-                if (agent == llGetOwner())
+                else
                 {
-                     llMessageLinked(LINK_ALL_CHILDREN, 0, "ON", NULL_KEY);
-                     llSetLinkAlpha(2,1.0,ALL_SIDES);
-                     llSetLinkAlpha(3,0.0,ALL_SIDES);
+                    llMessageLinked( LINK_ALL_CHILDREN, 0, "ON", NULL_KEY );
+                    llSetLinkAlpha( 2, 1.0, ALL_SIDES );
+                    llSetLinkAlpha( 3, 0.0, ALL_SIDES );
                 }
                     
             }
             else
             {
-                llSetTimerEvent(0);
-                llSetStatus(STATUS_PHYSICS, FALSE);
-                llSleep(.1);
-                llMessageLinked(LINK_ALL_CHILDREN, 0, "STAND", NULL_KEY);
-                llMessageLinked(LINK_ALL_CHILDREN, 0, "OFF",   NULL_KEY);
-                llSleep(.4);
+                // Can we release controls when people are no longer sitting?
                 llReleaseControls();
-                llListenRemove(iListenHandle);
-                llListenRemove(listener);              
-                llResetScript();
+                // Don't accept any more menu clicking
+                llListenRemove( listener );              
+                llSetStatus( STATUS_PHYSICS, FALSE );
+                llSleep( .1 );
+                llMessageLinked( LINK_ALL_CHILDREN, 0, "STAND", NULL_KEY );
+                llMessageLinked( LINK_ALL_CHILDREN, 0, "OFF",   NULL_KEY );
             }
         }
     }
     run_time_permissions(integer perm)
     {
-        if (perm)
+        if (perm & PERMISSION_TAKE_CONTROLS)
             llTakeControls(
                 CONTROL_FWD         |
                 CONTROL_BACK        |
@@ -145,53 +126,44 @@ default
     {
         integer     reverse             =   1;
         vector      angular_velocity    =   <0,0,  70 * DEG_TO_RAD>;
-        vector      angular_velocity1   =   <0,0, -70 * DEG_TO_RAD>;
-        vector      angular_motor;
         movementOffset                  =   <0,0,0>;
         vector      eul                 =   llRot2Euler(llGetCameraRot() / llGetRot());
         rotation    face                =   llEuler2Rot(<0,0,eul.z>);
         //get current speed
         vector      vel                 =   llGetVel();
         float       speed               =   llVecMag(vel);
+        integer     new_level           =   0;
         //car controls
-        if(level & CONTROL_FWD)
+        // If we do forward, don't do backwards.
+        if (level & CONTROL_FWD)
         {
-            cur_wheel_direction         =   "DRIVING";
-            llSay(chan, "walk");
-            llSetVehicleVectorParam(VEHICLE_LINEAR_MOTOR_DIRECTION, <forward_power,0,0> );
+            new_level                   =   CONTROL_FWD;
             reverse                     =   1;
+            llSetVehicleVectorParam(VEHICLE_LINEAR_MOTOR_DIRECTION, <forward_power,0,0> );
         }
-        if(level & CONTROL_BACK)
+        else
+        if (level & CONTROL_BACK)
         {
-            cur_wheel_direction         =   "DRIVING";
-            llSay(chan, "walk");
-            llSetVehicleVectorParam(VEHICLE_LINEAR_MOTOR_DIRECTION, <reverse_power,0,0> );
+            new_level                   =   CONTROL_BACK;
             reverse                     =   -1;
+            llSetVehicleVectorParam(VEHICLE_LINEAR_MOTOR_DIRECTION, <-1*forward_power,0,0> );
         }
         if(level & (CONTROL_RIGHT|CONTROL_ROT_RIGHT))
         {
-            cur_wheel_direction         =   "RIGHT";
-            llSay(chan, "right");
-            llSetVehicleVectorParam(VEHICLE_ANGULAR_MOTOR_DIRECTION, angular_velocity1);
+            new_level                   =   CONTROL_RIGHT;
+            llSetVehicleVectorParam(VEHICLE_ANGULAR_MOTOR_DIRECTION, angular_velocity * -1 );
         }
         if(level & (CONTROL_LEFT|CONTROL_ROT_LEFT))
         {
-            cur_wheel_direction         =   "LEFT";
-            llSay(chan, "left");
-            llSetVehicleVectorParam(VEHICLE_ANGULAR_MOTOR_DIRECTION, angular_velocity);
+            new_level                   =   CONTROL_LEFT;
+            llSetVehicleVectorParam(VEHICLE_ANGULAR_MOTOR_DIRECTION, angular_velocity );
         }
-        if(level & FALSE)
+        // No controls touched?
+        // 0 is out default for new_level, meaning no flags.
+        if ( new_level != cur_level )
         {
-            cur_wheel_direction         =   "STAND";
-            // llSetVehicleVectorParam(VEHICLE_ANGULAR_MOTOR_DIRECTION, angular_motor);
-        }
-    }
-    timer()
-    {
-        if (cur_wheel_direction != last_wheel_direction)
-        {
-            llMessageLinked(LINK_ALL_CHILDREN , 0, cur_wheel_direction, NULL_KEY);
-            last_wheel_direction        = cur_wheel_direction;
+            cur_level                   =   new_level;
+            llMessageLinked(LINK_ALL_CHILDREN, 12345, cur_level, NULL_KEY);
         }
     }
 }
