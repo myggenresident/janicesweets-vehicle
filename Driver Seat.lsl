@@ -2,29 +2,16 @@ string      sRBounce            =   "Rider Sit" ;
 string      sRLeft              =   "Rider Left" ;
 string      sRRight             =   "Rider Right" ;
 string      sRForw              =   "Rider Forward" ;
+integer     iRLVchan            =   -1812221819;
+string      active_anim;
 
-integer     iChan               =   -1812221819;
-
-integer     iDialogChannel      =   0;
-integer     iListenHandle       =   0;
-string      anim_new;
-string      anim_old;
-string      sAnim;
-integer     iAnimTime           =   1;
-key         kAgent              =   NULL_KEY;
-integer     listener;
-integer     listener2;
-integer     menuChannel         =   -1976;
-integer     chan                =   -12345;
-key         id;
-
-animateperms()
+anim( string anim_new )
 {
-    integer     count           =   llGetInventoryNumber(INVENTORY_ANIMATION);
-    llGetInventoryName(INVENTORY_ANIMATION,count - 1);
-    llRequestPermissions(llAvatarOnSitTarget(),PERMISSION_TRIGGER_ANIMATION|PERMISSION_TRACK_CAMERA);
-    llGetPermissions();
-    llStopAnimation("sit");
+    if (anim == active_anim)
+        return;
+    llStopAnimation( active_anim );
+    active_anim = anim_new;
+    llStartAnimation( active_anim );
 }
 
 default
@@ -32,113 +19,81 @@ default
     state_entry()
     {
         llSetCameraEyeOffset(<-2.0, 0.0, 2.0> );
-        llSetCameraAtOffset(<4.0, 0.0, 2.0> );
-        llSitTarget(<0.0,0,0.75>, ZERO_ROTATION);
-        llSetTimerEvent(0.0);
-        key     kPrisoner       =   llAvatarOnSitTarget();
-    }
-    listen(integer chan, string name, key id, string msg)
-    {
-        
-        if(msg == "walk")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRForw);
-        }
-        if(msg == "left")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRLeft);
-        }
-        if(msg == "right")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRRight);
-        }
-        else
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRBounce);
-        }
+        llSetCameraAtOffset( <4.0,  0.0, 2.0> );
+        llSitTarget( <0,0,0.75>, ZERO_ROTATION);
     }
     changed(integer change)
     {
+        if (change & CHANGED_INVENTORY)
+            inv_update();
         if (change & CHANGED_LINK) 
         {
-            key newav = llAvatarOnSitTarget();
-            if (newav != NULL_KEY)
+            key sitter = llAvatarOnSitTarget();
+            if ( sitter )
             {
-                llResetScript();
-                key         newav       =   llAvatarOnSitTarget();
-                string      snewav      =   llAvatarOnSitTarget();
-                integer     count       =   llGetInventoryNumber(INVENTORY_ANIMATION);
-                sAnim                   =   llGetInventoryName(INVENTORY_ANIMATION,count - 1);
-                llRequestPermissions(newav, PERMISSION_TRIGGER_ANIMATION);
-                llGetPermissions();
-                llRegionSayTo(llGetOwner(),iChan,"AcceptPerms" + (string) snewav + ("@acceptpermissions=y"));
-                llStopAnimation("sit");
-                llStartAnimation(sRBounce);
-                llListenRemove(iListenHandle);
+                llRequestPermissions( sitter, PERMISSION_TRIGGER_ANIMATION|PERMISSION_TRACK_CAMERA );
+                llRegionSayTo( llGetOwner(), iRLVchan, "AcceptPerms," + (string)sitter + ",@unsit=n" );
             }
             else
             {
-                vector      agent2      =   llGetAgentSize((key)newav);
-                if(agent2)
-                    llStopAnimation(anim_new);
-                newav = NULL_KEY;  
-                llListenRemove(iListenHandle);
-                llListenRemove(listener);
+                if(llGetAgentSize(sitter) != ZERO_VECTOR)
+                {
+                    // Still in the sim, so we try to free him/her
+                    if ( active_anim )
+                        llStopAnimation( active_anim );
+                    llReleaseControls();
+                }
             }            
         }
     }
     link_message(integer sender_num, integer num, string str, key id)
     {
-        if(msg == "Release")
+        if (msg == "Release")
         {
-            llRegionSayTo(llGetOwner(),iChan, "ClearRLV," + (string)llGetOwner() + ",@clear");
-            llSleep(0.5);
-            llRegionSayTo(llGetOwner(),iChan, "ForceUnSit," + (string)llGetOwner() + ",@unsit=force");
-            llSleep(2.0);
-           // llDie();
+            llRegionSayTo( llGetOwner(), iRLVchan, "ClearRLV," + (string)llGetOwner() + ",!release");
+            // is (s)he still sitting on us, then stand him/her up.
+            if ( llAvatarOnSitTarget() == llGetOwner() )
+                llUnSit( llGetOwner() );
+            return;
         }
-        if(str == "DRIVING")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRForw);
-        }
-        if(str == "STAND")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRBounce);
-        }
-        if(str == "LEFT")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRLeft);
-        }
-        if(str == "RIGHT")
-        {
-            llSleep(iAnimTime);
-            llStopAnimation(anim_new);
-            llStartAnimation(sRRight);
-        }
+        if (str == CONTROL_FWD)
+            // walking straight
+            anim(sRForw);
+        else
+        if (str == CONTROL_BACK)
+            // walking straight backwards
+            // Same animation as forward - might look odd.
+            anim(sRForw);
+        else
+        if (str == CONTROL_LEFT)
+            // turning
+            anim(sRLeft);
+        else
+        if (str == CONTROL_RIGHT)
+            // turning
+            anim(sRRight);
+        else
+        if (str == "STAND")
+            // not moving
+            anim(sRBounce);
+        else
+        if (str == "ON")
+            // ignore ON
+            return;
+        else
+        if (str == "OFF")
+            // ignore OFF
+            return;
                                                       
     }
     on_rez(integer iNum)
     {
-             llResetScript();
+        active_anim = "";
     }
     run_time_permissions(integer perm)
     {
         animateperms();
-        if (perm == PERMISSION_TAKE_CONTROLS)
+        if (perm & PERMISSION_TAKE_CONTROLS)
         {
             llTakeControls(
                 CONTROL_FWD         |
@@ -153,18 +108,11 @@ default
                 TRUE
             );
         }
-        else
+        if (perm & PERMISSION_TRIGGER_ANIMATION)
         {
-            animateperms();
-        }
-    }
-    timer()
-    {
-        if (anim_new != anim_old)
-        {
-            llStopAnimation(anim_old);
-            llStartAnimation(anim_new);
-            anim_old = anim_new;
+            llStopAnimation("sit");
+            // Default animation
+            llStartAnimation(sRBounce);
         }
     }
 }
