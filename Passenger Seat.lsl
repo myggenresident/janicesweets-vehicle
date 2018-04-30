@@ -1,24 +1,24 @@
-key kAgent;
-key kAv;
-string sBounce = "Bounce Stand" ;
-string sBLeft  = "Bounce Left" ;
-string sBRight = "Bounce Right" ;
-string sBForw  = "Bounce Forward" ;
+key         kAgent;
+key         kAv;
+string      sBounce             =   "Bounce Stand" ;
+string      sBLeft              =   "Bounce Left" ;
+string      sBRight             =   "Bounce Right" ;
+string      sBForw              =   "Bounce Forward" ;
 
-integer iChan =-1812221819;
+integer     iChan               =   -1812221819;
 
-integer  iDialogChannel     = 0;
-integer  iListenHandle      = 0;
-string sCommand = "forceSit,"; //arbitrary name, useful at times so you can identify commands
-string victim;
-string anim_new;
-string anim_old;
-string sAnim;
-integer iAnimTime = 1;
-integer listener;
-integer menuChannel = -1976;
-integer chan = -12345;
-key id;
+integer     iDialogChannel      =   0;
+integer     iListenHandle       =   0;
+string      sCommand            =   "forceSit,"; //arbitrary name, useful at times so you can identify commands
+string      victim;
+string      anim_new;
+string      anim_old;
+string      sAnim;
+integer     iAnimTime           =   1;
+integer     listener;
+integer     menuChannel         =   -1976;
+integer     chan                =   -12345;
+key         id;
 
 mainMenu(key id)
 {
@@ -26,8 +26,6 @@ mainMenu(key id)
     if(llDetectedKey(0))
     {
         buttons += ["Release"];
-        
-       
     }
     string prompt = "Please select an option.";
     listener = llListen(menuChannel, "", id, "");
@@ -48,6 +46,7 @@ victim1()
 {
     llDetectedOwner(0);
 }
+
 default
 {
     state_entry()
@@ -59,7 +58,6 @@ default
         iListenHandle = llListen( iChan, "", llGetOwner(), "");
         listener = llListen(chan, "", NULL_KEY,"");
         key kPrisoner = llGetOwner();
-        
     }
     on_rez(integer num)
     {
@@ -69,8 +67,7 @@ default
         llRegionSayTo(llGetOwner(),iChan, "DenyStand," + (string)llGetOwner() + ",@unsit=n");
         //animateperms();
     }
-    
-     changed(integer change)
+    changed(integer change)
     {
         if (change & CHANGED_LINK)
         {
@@ -97,13 +94,12 @@ default
                     llStopAnimation(anim_new);
                 }
                 kAv = NULL_KEY;
-                
                 llListenRemove(iListenHandle);
                 llListenRemove(listener);  
-            }            
+            }
         }
     }
-link_message(integer sender_num, integer num, string str, key id)
+    link_message(integer sender_num, integer num, string str, key id)
     {
         
         if(str == "DRIVING")
@@ -122,26 +118,17 @@ link_message(integer sender_num, integer num, string str, key id)
         {
             llSleep(iAnimTime);
             llStopAnimation(anim_new);
-           
             llStartAnimation(sBounce);
         }
         if(str == "RIGHT")
         {
             llSleep(iAnimTime);
             llStopAnimation(anim_new);
-           
             llStartAnimation(sBounce);
         }
-                                                      
     }
-        
-
-
-
-   
     listen(integer chan, string name, key kID, string msg )
     {
-        
         if(chan)
         {
             if(msg == "Release")
@@ -158,21 +145,18 @@ link_message(integer sender_num, integer num, string str, key id)
             {
                 llSleep(iAnimTime);
                 llStopAnimation(anim_new);
-           
                 llStartAnimation(sBForw);
             }
             if(msg == "left")
             {
                 llSleep(iAnimTime);
                 llStopAnimation(anim_new);
-           
                 llStartAnimation(sBLeft);
             }
             if(msg == "right")
             {
                 llSleep(iAnimTime);
                 llStopAnimation(anim_new);
-           
                 llStartAnimation(sBRight);
             }
             else
@@ -182,32 +166,25 @@ link_message(integer sender_num, integer num, string str, key id)
                 llStartAnimation(sBounce);
             }
         }
-        
-       
-       
     }
 
-
-run_time_permissions(integer perm)
+    run_time_permissions(integer perm)
     {
-        
         if (perm == PERMISSION_TAKE_CONTROLS)
         {
             llTakeControls( CONTROL_FWD | CONTROL_BACK | CONTROL_ROT_LEFT | CONTROL_ROT_RIGHT | CONTROL_UP | CONTROL_DOWN | CONTROL_LEFT | CONTROL_RIGHT, TRUE,TRUE);
-           
-                
         }
         else
         {
             animateperms();
         }
     }    
- timer()
+    timer()
     {
         if (anim_new != anim_old)
         {
-           llStopAnimation(anim_old);
-           llStartAnimation(anim_new);
+            llStopAnimation(anim_old);
+            llStartAnimation(anim_new);
             anim_old = anim_new;
         }
     }
