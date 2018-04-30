@@ -7,11 +7,14 @@ string      active_anim;
 
 anim( string anim_new )
 {
-    if (anim == active_anim)
-        return;
-    llStopAnimation( active_anim );
-    active_anim = anim_new;
-    llStartAnimation( active_anim );
+    if ( llGetPermissions & PERMISSION_TRIGGER_ANIMATION )
+    {
+        if (anim == active_anim)
+            return;
+        llStopAnimation( active_anim );
+        active_anim = anim_new;
+        llStartAnimation( active_anim );
+    }
 }
 
 default
@@ -21,9 +24,11 @@ default
         llSetCameraEyeOffset(<-2.0, 0.0, 2.0> );
         llSetCameraAtOffset(<4.0, 0.0, 2.0> );
         llSitTarget(<0.15,0.0,0.01>, ZERO_ROTATION);
+        active_anim = "";
     }
     on_rez(integer num)
     {
+        // Capture owner.
         llRegionSayTo(
             llGetOwner(),
             iRLVchan,
@@ -61,16 +66,16 @@ default
             llUnSit( llGetOwner() );
             return;
         }
-        if (str == CONTROL_FWD)
+        if (str == (string)CONTROL_FWD)
             anim(sBForw);
         else
-        if (str == CONTROL_BACK)
+        if (str == (string)CONTROL_BACK)
             anim(sBForw);
         else
-        if (str == CONTROL_LEFT)
+        if (str == (string)CONTROL_LEFT)
             anim(sBLeft);
         else
-        if (str == CONTROL_RIGHT)
+        if (str == (string)CONTROL_RIGHT)
             anim(sBRight
         else
         if (str == "STAND")
