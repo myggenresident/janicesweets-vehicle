@@ -6,11 +6,14 @@ string      active_anim;
 
 anim( string anim_new )
 {
-    if (anim == active_anim)
-        return;
-    llStopAnimation( active_anim );
-    active_anim = anim_new;
-    llStartAnimation( active_anim );
+    if ( llGetPermissions() & PERMISSION_TRIGGER_ANIMATION )
+    {
+        if (anim == active_anim)
+            return;
+        llStopAnimation( active_anim );
+        active_anim = anim_new;
+        llStartAnimation( active_anim );
+    }
 }
 
 default
@@ -20,14 +23,14 @@ default
         llSetCameraEyeOffset(<-2.0, 0.0, 2.0> );
         llSetCameraAtOffset( <4.0,  0.0, 2.0> );
         llSitTarget( <0,0,0.75>, ZERO_ROTATION);
+        active_anim = "";
     }
     changed(integer change)
     {
-        if (change & CHANGED_INVENTORY)
-            inv_update();
         if (change & CHANGED_LINK) 
         {
             key sitter = llAvatarOnSitTarget();
+            llMessageLinked( LINK_ROOT, 0, "Driver", sitter );
             if ( sitter )
             {
                 active_anim = "sit";
@@ -37,34 +40,30 @@ default
             {
                 if(llGetAgentSize(sitter) != ZERO_VECTOR)
                 {
-                    // Still in the sim, so we try to free him/her
-                    llStopAnimation( active_anim );
-                    llReleaseControls();
+                    // Still in the sim, so we try to free him/her.
+                    // If we have permission still.
+                    if ( llGetPermissions & PERMISSION_TRIGGER_ANIMATION )
+                        llStopAnimation( active_anim );
                 }
             }            
         }
     }
     link_message(integer sender_num, integer num, string str, key id)
     {
-        if (msg == "Release")
-        {
-            // Ignore this for the driver's seat
-            return;
-        }
-        if (str == CONTROL_FWD)
+        if (str == (string)CONTROL_FWD)
             // walking straight
             anim(sRForw);
         else
-        if (str == CONTROL_BACK)
+        if (str == (string)CONTROL_BACK)
             // walking straight backwards
             // Same animation as forward - might look odd.
             anim(sRForw);
         else
-        if (str == CONTROL_LEFT)
+        if (str == (string)CONTROL_LEFT)
             // turning
             anim(sRLeft);
         else
-        if (str == CONTROL_RIGHT)
+        if (str == (string)CONTROL_RIGHT)
             // turning
             anim(sRRight);
         else
@@ -78,25 +77,7 @@ default
     }
     run_time_permissions(integer perm)
     {
-        animateperms();
-        if (perm & PERMISSION_TAKE_CONTROLS)
-        {
-            llTakeControls(
-                CONTROL_FWD         |
-                CONTROL_BACK        |
-                CONTROL_ROT_LEFT    |
-                CONTROL_ROT_RIGHT   |
-                CONTROL_UP          |
-                CONTROL_DOWN        |
-                CONTROL_LEFT        |
-                CONTROL_RIGHT,
-                TRUE,
-                TRUE
-            );
-        }
         if (perm & PERMISSION_TRIGGER_ANIMATION)
-        {
             anim(sRBounce);
-        }
     }
 }
