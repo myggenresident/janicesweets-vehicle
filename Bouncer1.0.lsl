@@ -132,7 +132,8 @@ default
         //get current speed
         vector      vel                 =   llGetVel();
         float       speed               =   llVecMag(vel);
-        integer     new_level           =   0;
+        // STAND is our default for new_level, meaning no controls touched.
+        integer     new_level           =   "STAND";
         //car controls
         // If we do forward, don't do backwards.
         if (level & CONTROL_FWD)
@@ -158,12 +159,10 @@ default
             new_level                   =   CONTROL_LEFT;
             llSetVehicleVectorParam(VEHICLE_ANGULAR_MOTOR_DIRECTION, angular_velocity );
         }
-        // No controls touched?
-        // 0 is out default for new_level, meaning no flags.
         if ( new_level != cur_level )
         {
             cur_level                   =   new_level;
-            llMessageLinked(LINK_ALL_CHILDREN, 12345, cur_level, NULL_KEY);
+            llMessageLinked(LINK_ALL_CHILDREN, 0, cur_level, NULL_KEY);
         }
     }
 }
