@@ -18,17 +18,6 @@ integer     menuChannel         =   -1976;
 integer     chan                =   -12345;
 key         id;
 
-mainMenu(key id)
-{
-    list buttons;
-    if(llDetectedKey(0))
-        buttons += ["Release"];
-    string prompt = "Please select an option.";
-    listener = llListen(menuChannel, "", id, "");
-    listener2 = llListen(chan, "",id,"");
-    llDialog(id, prompt, buttons, menuChannel);
-}
-
 animateperms()
 {
     integer     count           =   llGetInventoryNumber(INVENTORY_ANIMATION);
@@ -48,29 +37,9 @@ default
         llSetTimerEvent(0.0);
         key     kPrisoner       =   llAvatarOnSitTarget();
     }
-    touch_start(integer total_number)
-    {
-        key     kPrisoner       =   llAvatarOnSitTarget();
-        if(kPrisoner != llGetOwner())
-        {
-           mainMenu(llDetectedKey(0));
-        }
-        else
-        {
-            llSay(0,llGetDisplayName(llDetectedOwner(0)) + " Tries To escape but cant get free");
-        }
-    } 
     listen(integer chan, string name, key id, string msg)
     {
         
-        if(msg == "Release")
-        {
-            llRegionSayTo(llGetOwner(),iChan, "ClearRLV," + (string)llGetOwner() + ",@clear");
-            llSleep(0.5);
-            llRegionSayTo(llGetOwner(),iChan, "ForceUnSit," + (string)llGetOwner() + ",@unsit=force");
-            llSleep(2.0);
-           // llDie();
-        }
         if(msg == "walk")
         {
             llSleep(iAnimTime);
@@ -128,7 +97,14 @@ default
     }
     link_message(integer sender_num, integer num, string str, key id)
     {
-        
+        if(msg == "Release")
+        {
+            llRegionSayTo(llGetOwner(),iChan, "ClearRLV," + (string)llGetOwner() + ",@clear");
+            llSleep(0.5);
+            llRegionSayTo(llGetOwner(),iChan, "ForceUnSit," + (string)llGetOwner() + ",@unsit=force");
+            llSleep(2.0);
+           // llDie();
+        }
         if(str == "DRIVING")
         {
             llSleep(iAnimTime);
