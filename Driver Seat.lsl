@@ -2,7 +2,6 @@ string      sRBounce            =   "Rider Sit" ;
 string      sRLeft              =   "Rider Left" ;
 string      sRRight             =   "Rider Right" ;
 string      sRForw              =   "Rider Forward" ;
-integer     iRLVchan            =   -1812221819;
 string      active_anim;
 
 anim( string anim_new )
@@ -31,16 +30,15 @@ default
             key sitter = llAvatarOnSitTarget();
             if ( sitter )
             {
+                active_anim = "sit";
                 llRequestPermissions( sitter, PERMISSION_TRIGGER_ANIMATION|PERMISSION_TRACK_CAMERA );
-                llRegionSayTo( llGetOwner(), iRLVchan, "AcceptPerms," + (string)sitter + ",@unsit=n" );
             }
             else
             {
                 if(llGetAgentSize(sitter) != ZERO_VECTOR)
                 {
                     // Still in the sim, so we try to free him/her
-                    if ( active_anim )
-                        llStopAnimation( active_anim );
+                    llStopAnimation( active_anim );
                     llReleaseControls();
                 }
             }            
@@ -50,10 +48,7 @@ default
     {
         if (msg == "Release")
         {
-            llRegionSayTo( llGetOwner(), iRLVchan, "ClearRLV," + (string)llGetOwner() + ",!release");
-            // is (s)he still sitting on us, then stand him/her up.
-            if ( llAvatarOnSitTarget() == llGetOwner() )
-                llUnSit( llGetOwner() );
+            // Ignore this for the driver's seat
             return;
         }
         if (str == CONTROL_FWD)
@@ -76,15 +71,6 @@ default
         if (str == "STAND")
             // not moving
             anim(sRBounce);
-        else
-        if (str == "ON")
-            // ignore ON
-            return;
-        else
-        if (str == "OFF")
-            // ignore OFF
-            return;
-                                                      
     }
     on_rez(integer iNum)
     {
@@ -110,9 +96,7 @@ default
         }
         if (perm & PERMISSION_TRIGGER_ANIMATION)
         {
-            llStopAnimation("sit");
-            // Default animation
-            llStartAnimation(sRBounce);
+            anim(sRBounce);
         }
     }
 }
